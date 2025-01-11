@@ -7,9 +7,13 @@ Linkit est un utilitaire de script PowerShell qui crée des scripts wrapper dans
 ## Fonctionnalités
 
 - Crée des scripts wrapper pour les fichiers `.exe`, `.cmd` et `.ps1`
-- Gère les fichiers uniques ou des répertoires entiers
+- Gère les fichiers individuels ou des répertoires entiers
 - Prend en charge l'analyse récursive des sous-répertoires
 - Ignore automatiquement les scripts wrapper existants
+- Génère différents scripts wrapper selon le type de fichier source :
+  - Fichiers `.exe` : génère des wrappers `.ps1` et `.cmd`
+  - Fichiers `.cmd` : génère des wrappers `.ps1` et `.cmd`
+  - Fichiers `.ps1` : génère un wrapper `.ps1` et un wrapper `.cmd` spécial (utilisant PowerShell)
 
 ## Utilisation
 

@@ -10,6 +10,10 @@ Linkit is a PowerShell script utility that creates wrapper scripts in the `D:\bi
 - Handles single files or entire directories
 - Supports recursive scanning of subdirectories
 - Automatically skips existing wrapper scripts
+- Generates different wrapper scripts based on source file type:
+  - `.exe` files: generates both `.ps1` and `.cmd` wrappers
+  - `.cmd` files: generates both `.ps1` and `.cmd` wrappers
+  - `.ps1` files: generates `.ps1` wrapper and special `.cmd` wrapper (using PowerShell)
 
 ## Usage
 
