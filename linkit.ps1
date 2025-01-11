@@ -1,4 +1,4 @@
-﻿$targetDir = "D:\bin"
+$targetDir = "D:\bin"
 $fileTypes = @("*.exe")
 $paths = @()
 $recursive = $false
@@ -24,20 +24,89 @@ if ($paths.Count -eq 0) {
 
 function Create-WrapperScript($originalPath, $targetDir) {
     $fileName = [System.IO.Path]::GetFileNameWithoutExtension($originalPath)
-    $targetPath = Join-Path -Path $targetDir -ChildPath "$fileName.ps1"
+    $extension = [System.IO.Path]::GetExtension($originalPath).ToLower()
     
-    if (Test-Path -Path $targetPath) {
-        Write-Host "Skipped: $targetPath already exists."
-        return
-    }
-    
-    $scriptContent = @"
+    # 根据源文件类型决定生成的包装脚本
+    switch ($extension) {
+        ".exe" {
+            # EXE: 生成 PS1 和 CMD wrapper
+            $ps1TargetPath = Join-Path -Path $targetDir -ChildPath "$fileName.ps1"
+            if (Test-Path -Path $ps1TargetPath) {
+                Write-Host "Skipped: $ps1TargetPath already exists."
+            } else {
+                $ps1Content = @"
 # Wrapper script for $originalPath
 & '$originalPath' `$args
 "@
-    
-    Set-Content -Path $targetPath -Value $scriptContent -Encoding UTF8
-    Write-Host "Created wrapper script: $targetPath -> $originalPath"
+                Set-Content -Path $ps1TargetPath -Value $ps1Content -Encoding UTF8
+                Write-Host "Created PS1 wrapper: $ps1TargetPath -> $originalPath"
+            }
+
+            $cmdTargetPath = Join-Path -Path $targetDir -ChildPath "$fileName.cmd"
+            if (Test-Path -Path $cmdTargetPath) {
+                Write-Host "Skipped: $cmdTargetPath already exists."
+            } else {
+                $cmdContent = @"
+@echo off
+"$originalPath" %*
+"@
+                Set-Content -Path $cmdTargetPath -Value $cmdContent -Encoding UTF8
+                Write-Host "Created CMD wrapper: $cmdTargetPath -> $originalPath"
+            }
+        }
+        ".cmd" {
+            # CMD: 生成 PS1 和 CMD wrapper
+            $ps1TargetPath = Join-Path -Path $targetDir -ChildPath "$fileName.ps1"
+            if (Test-Path -Path $ps1TargetPath) {
+                Write-Host "Skipped: $ps1TargetPath already exists."
+            } else {
+                $ps1Content = @"
+# Wrapper script for $originalPath
+& '$originalPath' `$args
+"@
+                Set-Content -Path $ps1TargetPath -Value $ps1Content -Encoding UTF8
+                Write-Host "Created PS1 wrapper: $ps1TargetPath -> $originalPath"
+            }
+
+            $cmdTargetPath = Join-Path -Path $targetDir -ChildPath "$fileName.cmd"
+            if (Test-Path -Path $cmdTargetPath) {
+                Write-Host "Skipped: $cmdTargetPath already exists."
+            } else {
+                $cmdContent = @"
+@echo off
+"$originalPath" %*
+"@
+                Set-Content -Path $cmdTargetPath -Value $cmdContent -Encoding UTF8
+                Write-Host "Created CMD wrapper: $cmdTargetPath -> $originalPath"
+            }
+        }
+        ".ps1" {
+            # PS1: 生成 PS1 wrapper 和使用 powershell.exe 的 CMD wrapper
+            $ps1TargetPath = Join-Path -Path $targetDir -ChildPath "$fileName.ps1"
+            if (Test-Path -Path $ps1TargetPath) {
+                Write-Host "Skipped: $ps1TargetPath already exists."
+            } else {
+                $ps1Content = @"
+# Wrapper script for $originalPath
+& '$originalPath' `$args
+"@
+                Set-Content -Path $ps1TargetPath -Value $ps1Content -Encoding UTF8
+                Write-Host "Created PS1 wrapper: $ps1TargetPath -> $originalPath"
+            }
+
+            $cmdTargetPath = Join-Path -Path $targetDir -ChildPath "$fileName.cmd"
+            if (Test-Path -Path $cmdTargetPath) {
+                Write-Host "Skipped: $cmdTargetPath already exists."
+            } else {
+                $cmdContent = @"
+@echo off
+powershell -NoProfile -ExecutionPolicy Bypass -File "$originalPath" %*
+"@
+                Set-Content -Path $cmdTargetPath -Value $cmdContent -Encoding UTF8
+                Write-Host "Created CMD wrapper: $cmdTargetPath -> $originalPath"
+            }
+        }
+    }
 }
 
 foreach ($path in $paths) {
