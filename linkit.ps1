@@ -1,25 +1,17 @@
-# 定义目标目录（D:\bin）
-$targetDir = "D:\bin"
-
-# 定义默认扫描的文件类型
+﻿$targetDir = "D:\bin"
 $fileTypes = @("*.exe")
-
-# 解析参数
 $paths = @()
 $recursive = $false
-for ($i = 0; $i -lt $args.Count; $i++) {
-    if ($args[$i] -eq "-c") {
-        $fileTypes += "*.cmd"
-    } elseif ($args[$i] -eq "-p") {
-        $fileTypes += "*.ps1"
-    } elseif ($args[$i] -eq "-a") {
-        $recursive = $true
-    } else {
-        $paths += $args[$i]
+
+foreach ($arg in $args) {
+    switch ($arg) {
+        "-c" { $fileTypes += "*.cmd" }
+        "-p" { $fileTypes += "*.ps1" }
+        "-a" { $recursive = $true }
+        default { $paths += $arg }
     }
 }
 
-# 如果没有提供路径，显示用法信息
 if ($paths.Count -eq 0) {
     Write-Host "Usage:"
     Write-Host "  linkit [-c] [-p] [-a] path1 [path2 ...]"
@@ -30,13 +22,7 @@ if ($paths.Count -eq 0) {
     exit
 }
 
-# 创建包装脚本的函数
-function Create-WrapperScript {
-    param (
-        [string]$originalPath,
-        [string]$targetDir
-    )
-    
+function Create-WrapperScript($originalPath, $targetDir) {
     $fileName = [System.IO.Path]::GetFileNameWithoutExtension($originalPath)
     $targetPath = Join-Path -Path $targetDir -ChildPath "$fileName.ps1"
     
@@ -50,34 +36,36 @@ function Create-WrapperScript {
 & '$originalPath' `$args
 "@
     
-    Set-Content -Path $targetPath -Value $scriptContent
+    Set-Content -Path $targetPath -Value $scriptContent -Encoding UTF8
     Write-Host "Created wrapper script: $targetPath -> $originalPath"
 }
 
-# 遍历每个路径
 foreach ($path in $paths) {
-    # 单个文件模式
-    if (Test-Path -Path $path -PathType Leaf) {
-        Create-WrapperScript -originalPath (Resolve-Path $path) -targetDir $targetDir
+    if (-not (Test-Path -Path $path)) {
+        Write-Host "Error: $path does not exist."
+        continue
     }
-    # 目录模式
-    elseif (Test-Path -Path $path -PathType Container) {
-        # 获取目录中的所有匹配文件
-        if ($recursive) {
-            $files = Get-ChildItem -Path $path -Include $fileTypes -Recurse
-        } else {
-            $files = Get-ChildItem -Path $path -Include $fileTypes
-        }
 
-        if ($files.Count -eq 0) {
-            Write-Host "No matching files found in $path"
-        } else {
+    if (Test-Path -Path $path -PathType Leaf) {
+        Create-WrapperScript (Resolve-Path $path).Path $targetDir
+        continue
+    }
+
+    $foundFiles = $false
+    foreach ($fileType in $fileTypes) {
+        $searchOption = if ($recursive) { "-Recurse" } else { "" }
+        $cmd = "Get-ChildItem -Path '$path' -Filter '$fileType' $searchOption"
+        $files = Invoke-Expression $cmd
+        
+        if ($files) {
+            $foundFiles = $true
             foreach ($file in $files) {
-                Create-WrapperScript -originalPath $file.FullName -targetDir $targetDir
+                Create-WrapperScript $file.FullName $targetDir
             }
         }
     }
-    else {
-        Write-Host "Error: $path does not exist."
+
+    if (-not $foundFiles) {
+        Write-Host "No matching files found in $path"
     }
 }
